@@ -1,6 +1,5 @@
 var util = require('util');
 var hark = require('hark');
-var getScreenMedia = require('getscreenmedia');
 var WildEmitter = require('wildemitter');
 var mockconsole = require('mockconsole');
 
@@ -140,36 +139,53 @@ LocalMedia.prototype.startScreenShare = function (constraints, cb) {
 
     this.emit('localScreenRequested');
 
+    // in the case that no constraints are passed,
+    // but a callback is, swap
     if (typeof constraints === 'function' && !cb) {
         cb = constraints;
         constraints = null;
     }
 
-    getScreenMedia(constraints, function (err, stream) {
-        if (!err) {
-            self.localScreens.push(stream);
-
-            stream.getTracks().forEach(function (track) {
-                track.addEventListener('ended', function () {
-                    var isAllTracksEnded = true;
-                    stream.getTracks().forEach(function (t) {
-                        isAllTracksEnded = t.readyState === 'ended' && isAllTracksEnded;
-                    });
-
-                    if (isAllTracksEnded) {
-                        self._removeStream(stream);
-                    }
-                });
-            });
-
-            self.emit('localScreen', stream);
-        } else {
-            self.emit('localScreenRequestFailed');
+    var getScreenMedia = null;
+    // check if we're in a browser that supports getDisplayMedia
+    if ('getDisplayMedia' in navigator.mediaDevices) {
+        getScreenMedia = window.navigator.mediaDevices.getDisplayMedia;
+    } else if (navigator.getDisplayMedia) {
+        getScreenMedia = window.navigator.getDisplayMedia;
+    } else {
+        // cannot get display media
+        self.emit('localScreenRequestFailed');
+        if (cb) {
+            cb(err);
         }
 
-        // enable the callback
+        return;
+    }
+
+    getScreenMedia(constraints).then(function (stream) {
+        self.localScreens.push(stream);
+
+        stream.getTracks().forEach(function (track) {
+            track.addEventListener('ended', function () {
+                var isAllTracksEnded = true;
+                stream.getTracks().forEach(function (t) {
+                    isAllTracksEnded = t.readyState === 'ended' && isAllTracksEnded;
+                });
+
+                if (isAllTracksEnded) {
+                    self._removeStream(stream);
+                }
+            });
+        });
+
+        self.emit('localScreen', stream);
         if (cb) {
-            return cb(err, stream);
+            cb(null, stream);
+        }
+    }).catch(function (err) {
+        self.emit('localScreenRequestFailed');
+        if (cb) {
+            cb(err);
         }
     });
 };
