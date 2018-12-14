@@ -132,11 +132,20 @@ LocalMedia.prototype.stopStream = function (stream) {
     }
 };
 
+function isAvailableScreenShareSource() {
+    return (navigator.getDisplayMedia ||
+            !!navigator.mediaDevices.getSupportedConstraints().mediaSource);
+}
+
 LocalMedia.prototype.startScreenShare = function (constraints, cb) {
     var self = this;
 
     this.emit('localScreenRequested');
 
+    if (!isAvailableScreenShareSource()) {
+        self.emit('localScreenRequestFailed');
+        return;
+    }
     // in the case that no constraints are passed,
     // but a callback is, swap
     if (typeof constraints === 'function' && !cb) {
