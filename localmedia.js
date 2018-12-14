@@ -116,7 +116,6 @@ LocalMedia.prototype.stopStream = function (stream) {
         var idx = this.localStreams.indexOf(stream);
         if (idx > -1) {
             stream.getTracks().forEach(function (track) { track.stop(); });
-
             //Half-working fix for Firefox, see: https://bugzilla.mozilla.org/show_bug.cgi?id=1208373
             if (shouldWorkAroundFirefoxStopStream()) {
                 this._removeStream(stream);
@@ -125,7 +124,6 @@ LocalMedia.prototype.stopStream = function (stream) {
     } else {
         this.localStreams.forEach(function (stream) {
             stream.getTracks().forEach(function (track) { track.stop(); });
-
             //Half-working fix for Firefox, see: https://bugzilla.mozilla.org/show_bug.cgi?id=1208373
             if (shouldWorkAroundFirefoxStopStream()) {
                 self._removeStream(stream);
@@ -146,23 +144,17 @@ LocalMedia.prototype.startScreenShare = function (constraints, cb) {
         constraints = null;
     }
 
-    var getScreenMedia = null;
-    // check if we're in a browser that supports getDisplayMedia
-    if ('getDisplayMedia' in navigator.mediaDevices) {
-        getScreenMedia = window.navigator.mediaDevices.getDisplayMedia;
-    } else if (navigator.getDisplayMedia) {
-        getScreenMedia = window.navigator.getDisplayMedia;
-    } else {
-        // cannot get display media
-        self.emit('localScreenRequestFailed');
-        if (cb) {
-            cb(err);
+    var getDisplayMedia = function () {
+        if (navigator.getDisplayMedia) {
+            return navigator.getDisplayMedia({ video: true });
+        } else {
+            return navigator.mediaDevices.getUserMedia({ video: { mediaSource: 'screen' } });
         }
 
-        return;
-    }
+    };
 
-    getScreenMedia(constraints).then(function (stream) {
+
+    getDisplayMedia().then(function (stream) {
         self.localScreens.push(stream);
 
         stream.getTracks().forEach(function (track) {
@@ -197,20 +189,12 @@ LocalMedia.prototype.stopScreenShare = function (stream) {
         var idx = this.localScreens.indexOf(stream);
         if (idx > -1) {
             stream.getTracks().forEach(function (track) { track.stop(); });
-
-            //Half-working fix for Firefox, see: https://bugzilla.mozilla.org/show_bug.cgi?id=1208373
-            if (shouldWorkAroundFirefoxStopStream()) {
-                this._removeStream(stream);
-            }
+            this._removeStream(stream);
         }
     } else {
         this.localScreens.forEach(function (stream) {
             stream.getTracks().forEach(function (track) { track.stop(); });
-
-            //Half-working fix for Firefox, see: https://bugzilla.mozilla.org/show_bug.cgi?id=1208373
-            if (shouldWorkAroundFirefoxStopStream()) {
-                self._removeStream(stream);
-            }
+            self._removeStream(stream);
         });
     }
 };

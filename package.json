@@ -18,7 +18,6 @@
   "main": "localmedia.js",
   "description": "WebRTC abstraction for managing local media streams.",
   "dependencies": {
-    "getscreenmedia": "github:jordanreedie/getScreenMedia#master",
     "hark": "^1.0.0",
     "mockconsole": "0.0.x",
     "wildemitter": "^1.0.0"
