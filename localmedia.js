@@ -132,9 +132,26 @@ LocalMedia.prototype.stopStream = function (stream) {
     }
 };
 
-function isAvailableScreenShareSource() {
+function isScreenShareSourceAvailable() {
+    // currently we only support chrome v70+ (w/ experimental features enabled, if necessary)
+    // and firefox
     return (navigator.getDisplayMedia ||
             !!navigator.mediaDevices.getSupportedConstraints().mediaSource);
+}
+
+function getDisplayMedia() {
+    // should only be called after checking we have a source available
+    if (!isScreenShareSourceAvailable()) {
+        // TODO throw an error or something
+    }
+    if (navigator.getDisplayMedia) {
+        // chrome 70+
+        return navigator.getDisplayMedia({ video: true });
+    } else {
+        // firefox ? <= x <= 64
+        return navigator.mediaDevices.getUserMedia({ video: { mediaSource: 'screen' } });
+    }
+
 }
 
 LocalMedia.prototype.startScreenShare = function (constraints, cb) {
@@ -142,26 +159,17 @@ LocalMedia.prototype.startScreenShare = function (constraints, cb) {
 
     this.emit('localScreenRequested');
 
-    if (!isAvailableScreenShareSource()) {
+    if (!isScreenShareSourceAvailable()) {
         self.emit('localScreenRequestFailed');
         return;
     }
+
     // in the case that no constraints are passed,
     // but a callback is, swap
     if (typeof constraints === 'function' && !cb) {
         cb = constraints;
         constraints = null;
     }
-
-    var getDisplayMedia = function () {
-        if (navigator.getDisplayMedia) {
-            return navigator.getDisplayMedia({ video: true });
-        } else {
-            return navigator.mediaDevices.getUserMedia({ video: { mediaSource: 'screen' } });
-        }
-
-    };
-
 
     getDisplayMedia().then(function (stream) {
         self.localScreens.push(stream);
