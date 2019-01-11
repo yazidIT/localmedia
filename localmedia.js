@@ -11,6 +11,13 @@ function isAllTracksEnded(stream) {
     return isAllTracksEnded;
 }
 
+function isScreenShareSourceAvailable() {
+    // currently we only support chrome v70+ (w/ experimental features enabled, if necessary)
+    // and firefox
+    return (navigator.getDisplayMedia ||
+            !!navigator.mediaDevices.getSupportedConstraints().mediaSource);
+}
+
 function shouldWorkAroundFirefoxStopStream() {
   if (typeof window === 'undefined') {
     return false;
@@ -132,24 +139,37 @@ LocalMedia.prototype.stopStream = function (stream) {
     }
 };
 
-function isScreenShareSourceAvailable() {
-    // currently we only support chrome v70+ (w/ experimental features enabled, if necessary)
-    // and firefox
-    return (navigator.getDisplayMedia ||
-            !!navigator.mediaDevices.getSupportedConstraints().mediaSource);
-}
 
 function getDisplayMedia() {
-    // should only be called after checking we have a source available
+    // getDisplayMedia should only be called after checking we have a source available
     if (!isScreenShareSourceAvailable()) {
         // TODO throw an error or something
     }
-    if (navigator.getDisplayMedia) {
+    if (navigator.mediaDevices.getDisplayMedia) {
+        return navigator.mediaDevices.getDisplayMedia({ audio: true, video: true });
+    } else if (navigator.getDisplayMedia) {
         // chrome 70+
-        return navigator.getDisplayMedia({ video: true });
+        return navigator.getDisplayMedia({ video: true }).then(function(screenStream) {
+            return navigator.mediaDevices.getUserMedia({ video: false, audio: true }).then(function(audioStream) {
+                return new Promise(function(resolve, reject) {
+                    try {
+                        var screenWithAudio = new MediaStream();
+                        screenWithAudio.addTrack(screenStream.getVideoTracks()[0]);
+                        screenWithAudio.addTrack(audioStream.getAudioTracks()[0]);
+                        resolve(screenWithAudio);
+                    } catch (err) {
+                        // TODO - is it worth trying without audio? probably not
+                        reject(err);
+                    }
+                });
+            });
+        });
     } else {
         // firefox ? <= x <= 64
-        return navigator.mediaDevices.getUserMedia({ video: { mediaSource: 'screen' } });
+        return navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: { mediaSource: 'screen' }
+        });
     }
 
 }
@@ -338,5 +358,4 @@ LocalMedia.prototype._stopAudioMonitor = function (stream) {
         this._audioMonitors.splice(idx, 1);
     }
 };
-
 module.exports = LocalMedia;
