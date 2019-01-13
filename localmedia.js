@@ -274,6 +274,11 @@ LocalMedia.prototype._audioEnabled = function (bool) {
             track.enabled = !!bool;
         });
     });
+    this.localScreens.forEach(function (stream) {
+        stream.getAudioTracks().forEach(function (track) {
+            track.enabled = !!bool;
+        });
+    });
 };
 LocalMedia.prototype._videoEnabled = function (bool) {
     this.localStreams.forEach(function (stream) {
@@ -287,6 +292,11 @@ LocalMedia.prototype._videoEnabled = function (bool) {
 LocalMedia.prototype.isAudioEnabled = function () {
     var enabled = true;
     this.localStreams.forEach(function (stream) {
+        stream.getAudioTracks().forEach(function (track) {
+            enabled = enabled && track.enabled;
+        });
+    });
+    this.localScreens.forEach(function (stream) {
         stream.getAudioTracks().forEach(function (track) {
             enabled = enabled && track.enabled;
         });
