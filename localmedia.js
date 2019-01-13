@@ -194,6 +194,12 @@ LocalMedia.prototype.startScreenShare = function (constraints, cb) {
     getDisplayMedia().then(function (stream) {
         self.localScreens.push(stream);
 
+        // if the user was muted before sharing,
+        // they should not be unmuted when sharing
+        if (!self.isAudioEnabled()) {
+          self.mute();
+        }
+
         stream.getTracks().forEach(function (track) {
             track.addEventListener('ended', function () {
                 var isAllTracksEnded = true;
