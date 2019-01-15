@@ -200,16 +200,10 @@ LocalMedia.prototype.startScreenShare = function (constraints, cb) {
           self.mute();
         }
 
-        stream.getTracks().forEach(function (track) {
+        // we only care about video track ending for screen sharing
+        stream.getVideoTracks().forEach(function (track) {
             track.addEventListener('ended', function () {
-                var isAllTracksEnded = true;
-                stream.getTracks().forEach(function (t) {
-                    isAllTracksEnded = t.readyState === 'ended' && isAllTracksEnded;
-                });
-
-                if (isAllTracksEnded) {
-                    self._removeStream(stream);
-                }
+                self._removeStream(stream);
             });
         });
 
