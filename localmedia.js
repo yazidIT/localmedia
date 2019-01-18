@@ -140,34 +140,38 @@ LocalMedia.prototype.stopStream = function (stream) {
 };
 
 
-function getDisplayMedia() {
+function getDisplayMedia(constraints) {
     // getDisplayMedia should only be called after checking we have a source available
     if (!isScreenShareSourceAvailable()) {
         // TODO throw an error or something
     }
     if (navigator.mediaDevices.getDisplayMedia) {
-        return navigator.mediaDevices.getDisplayMedia({ audio: true, video: true });
+        return navigator.mediaDevices.getDisplayMedia(constraints);
     } else if (navigator.getDisplayMedia) {
         // chrome 70+
-        return navigator.getDisplayMedia({ video: true }).then(function(screenStream) {
-            return navigator.mediaDevices.getUserMedia({ video: false, audio: true }).then(function(audioStream) {
-                return new Promise(function(resolve, reject) {
-                    try {
-                        var screenWithAudio = new MediaStream();
-                        screenWithAudio.addTrack(screenStream.getVideoTracks()[0]);
-                        screenWithAudio.addTrack(audioStream.getAudioTracks()[0]);
-                        resolve(screenWithAudio);
-                    } catch (err) {
-                        // TODO - is it worth trying without audio? probably not
-                        reject(err);
-                    }
+        if (constraints && constraints.audio) {
+            return navigator.getDisplayMedia({ video: true }).then(function(screenStream) {
+                return navigator.mediaDevices.getUserMedia({ video: false, audio: true }).then(function(audioStream) {
+                    return new Promise(function(resolve, reject) {
+                        try {
+                            var screenWithAudio = new MediaStream();
+                            screenWithAudio.addTrack(screenStream.getVideoTracks()[0]);
+                            screenWithAudio.addTrack(audioStream.getAudioTracks()[0]);
+                            resolve(screenWithAudio);
+                        } catch (err) {
+                            // TODO - is it worth trying without audio? probably not
+                            reject(err);
+                        }
+                    });
                 });
             });
-        });
+        } else {
+            return navigator.getDisplayMedia({ video: true });
+        }
     } else {
         // firefox ? <= x <= 64
         return navigator.mediaDevices.getUserMedia({
-          audio: true,
+          audio: constraints.audio,
           video: { mediaSource: 'screen' }
         });
     }
@@ -188,10 +192,11 @@ LocalMedia.prototype.startScreenShare = function (constraints, cb) {
     // but a callback is, swap
     if (typeof constraints === 'function' && !cb) {
         cb = constraints;
-        constraints = null;
+        // by default, request only video
+        constraints = { video: true, audio: false };
     }
 
-    getDisplayMedia().then(function (stream) {
+    getDisplayMedia(constraints).then(function (stream) {
         self.localScreens.push(stream);
 
         // if the user was muted before sharing,
