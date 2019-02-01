@@ -141,29 +141,38 @@ LocalMedia.prototype.stopStream = function (stream) {
 };
 
 
-function getDisplayMedia() {
+function getDisplayMedia(constraints) {
     // getDisplayMedia should only be called after checking we have a source available
     if (!isScreenShareSourceAvailable()) {
         // TODO throw an error or something
     }
     if (navigator.mediaDevices.getDisplayMedia) {
-        return navigator.mediaDevices.getDisplayMedia({ audio: true, video: true });
+        return navigator.mediaDevices.getDisplayMedia(constraints);
     } else if (navigator.getDisplayMedia) {
         // chrome 70+
-        return navigator.getDisplayMedia({ video: true }).then(function(screenStream) {
-            return navigator.mediaDevices.getUserMedia({ video: false, audio: true }).then(function(audioStream) {
-                return new Promise((resolve, reject) => {
-                    var screenWithAudio = new MediaStream();
-                    screenWithAudio.addTrack(screenStream.getVideoTracks()[0])
-                    screenWithAudio.addTrack(audioStream.getAudioTracks()[0])
-                    resolve(screenWithAudio);
+        if (constraints && constraints.audio) {
+            return navigator.getDisplayMedia({ video: true }).then(function(screenStream) {
+                return navigator.mediaDevices.getUserMedia({ video: false, audio: true }).then(function(audioStream) {
+                    return new Promise(function(resolve, reject) {
+                        try {
+                            var screenWithAudio = new MediaStream();
+                            screenWithAudio.addTrack(screenStream.getVideoTracks()[0]);
+                            screenWithAudio.addTrack(audioStream.getAudioTracks()[0]);
+                            resolve(screenWithAudio);
+                        } catch (err) {
+                            // TODO - is it worth trying without audio? probably not
+                            reject(err);
+                        }
+                    });
                 });
             });
-        });
+        } else {
+            return navigator.getDisplayMedia({ video: true });
+        }
     } else {
         // firefox ? <= x <= 64
         return navigator.mediaDevices.getUserMedia({
-          audio: true,
+          audio: constraints.audio,
           video: { mediaSource: 'screen' }
         });
     }
@@ -180,26 +189,29 @@ LocalMedia.prototype.startScreenShare = function (constraints, cb) {
         return;
     }
 
+
     // in the case that no constraints are passed,
     // but a callback is, swap
     if (typeof constraints === 'function' && !cb) {
         cb = constraints;
-        constraints = null;
+        constraints = undefined;
     }
 
-    getDisplayMedia().then(function (stream) {
+    constraints = constraints || { video: true, audio: true};
+
+    getDisplayMedia(constraints).then(function (stream) {
         self.localScreens.push(stream);
 
-        stream.getTracks().forEach(function (track) {
-            track.addEventListener('ended', function () {
-                var isAllTracksEnded = true;
-                stream.getTracks().forEach(function (t) {
-                    isAllTracksEnded = t.readyState === 'ended' && isAllTracksEnded;
-                });
+        // if the user was muted before sharing,
+        // they should not be unmuted when sharing
+        if (!self.isAudioEnabled()) {
+          self.mute();
+        }
 
-                if (isAllTracksEnded) {
-                    self._removeStream(stream);
-                }
+        // we only care about video track ending for screen sharing
+        stream.getVideoTracks().forEach(function (track) {
+            track.addEventListener('ended', function () {
+                self._removeStream(stream);
             });
         });
 
@@ -270,6 +282,11 @@ LocalMedia.prototype._audioEnabled = function (bool) {
             track.enabled = !!bool;
         });
     });
+    this.localScreens.forEach(function (stream) {
+        stream.getAudioTracks().forEach(function (track) {
+            track.enabled = !!bool;
+        });
+    });
 };
 LocalMedia.prototype._videoEnabled = function (bool) {
     this.localStreams.forEach(function (stream) {
@@ -283,6 +300,11 @@ LocalMedia.prototype._videoEnabled = function (bool) {
 LocalMedia.prototype.isAudioEnabled = function () {
     var enabled = true;
     this.localStreams.forEach(function (stream) {
+        stream.getAudioTracks().forEach(function (track) {
+            enabled = enabled && track.enabled;
+        });
+    });
+    this.localScreens.forEach(function (stream) {
         stream.getAudioTracks().forEach(function (track) {
             enabled = enabled && track.enabled;
         });

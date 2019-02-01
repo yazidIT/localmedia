@@ -188,13 +188,15 @@ LocalMedia.prototype.startScreenShare = function (constraints, cb) {
         return;
     }
 
+
     // in the case that no constraints are passed,
     // but a callback is, swap
     if (typeof constraints === 'function' && !cb) {
         cb = constraints;
-        // by default, request only video
-        constraints = { video: true, audio: false };
+        constraints = null;
     }
+
+    constraints = constraints || { video: true, audio: true};
 
     getDisplayMedia(constraints).then(function (stream) {
         self.localScreens.push(stream);
