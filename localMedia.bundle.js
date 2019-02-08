@@ -13,10 +13,13 @@ function isAllTracksEnded(stream) {
 }
 
 function isScreenShareSourceAvailable() {
-    // currently we only support chrome v70+ (w/ experimental features enabled, if necessary)
+    // currently we only support chrome v70+ (w/ experimental features in versions <72)
     // and firefox
-    return (navigator.getDisplayMedia ||
-            !!navigator.mediaDevices.getSupportedConstraints().mediaSource);
+  return (
+    navigator.getDisplayMedia ||
+    navigator.mediaDevices.getDisplayMedia ||
+    Boolean(navigator.mediaDevices.getSupportedConstraints().mediaSource)
+  );
 }
 
 function shouldWorkAroundFirefoxStopStream() {
@@ -194,7 +197,7 @@ LocalMedia.prototype.startScreenShare = function (constraints, cb) {
     // but a callback is, swap
     if (typeof constraints === 'function' && !cb) {
         cb = constraints;
-        constraints = undefined;
+        constraints = null;
     }
 
     constraints = constraints || { video: true, audio: true};
