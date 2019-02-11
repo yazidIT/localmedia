@@ -144,40 +144,46 @@ LocalMedia.prototype.stopStream = function (stream) {
 
 
 function getDisplayMedia(constraints) {
-    // getDisplayMedia should only be called after checking we have a source available
-    if (!isScreenShareSourceAvailable()) {
-        // TODO throw an error or something
-    }
-    if (navigator.mediaDevices.getDisplayMedia) {
-        return navigator.mediaDevices.getDisplayMedia(constraints);
-    } else if (navigator.getDisplayMedia) {
-        // chrome 70+
-        if (constraints && constraints.audio) {
-            return navigator.getDisplayMedia({ video: true }).then(function(screenStream) {
-                return navigator.mediaDevices.getUserMedia({ video: false, audio: true }).then(function(audioStream) {
-                    return new Promise(function(resolve, reject) {
-                        try {
-                            var screenWithAudio = new MediaStream();
-                            screenWithAudio.addTrack(screenStream.getVideoTracks()[0]);
-                            screenWithAudio.addTrack(audioStream.getAudioTracks()[0]);
-                            resolve(screenWithAudio);
-                        } catch (err) {
-                            // TODO - is it worth trying without audio? probably not
-                            reject(err);
-                        }
-                    });
-                });
+    let attachAudio = function(screenStream) {
+        return navigator.mediaDevices.getUserMedia({ video: false, audio: true }).then(function(audioStream) {
+            return new Promise(function(resolve, reject) {
+                try {
+                    var screenWithAudio = new MediaStream();
+                    screenWithAudio.addTrack(screenStream.getVideoTracks()[0]);
+                    screenWithAudio.addTrack(audioStream.getAudioTracks()[0]);
+                    resolve(screenWithAudio);
+                } catch (err) {
+                    reject(err);
+                }
             });
-        } else {
-            return navigator.getDisplayMedia({ video: true });
-        }
+        });
+    };
+
+    let displayMedia;
+    let needAttach = false;
+
+    // this is a little gross because chrome doesn't support requesting audio but firefox does
+    if (navigator.mediaDevices.getDisplayMedia) {
+        // chrome 72+
+        displayMedia = navigator.mediaDevices.getDisplayMedia({ video: true });
+        needAttach = true;
+    } else if (navigator.getDisplayMedia) {
+        // chrome 70 & 71 (exp. features enabled)
+        displayMedia = navigator.getDisplayMedia({ video: true }).then();
+        needAttach = true;
     } else {
         // firefox ? <= x <= 64
-        return navigator.mediaDevices.getUserMedia({
-          audio: constraints.audio,
+        displayMedia = navigator.mediaDevices.getUserMedia({
+          audio: constraints && constraints.audio,
           video: { mediaSource: 'screen' }
         });
     }
+
+  if (constraints && constraints.audio && needAttach) {
+      return displayMedia.then(attachAudio);
+  } else {
+      return displayMedia;
+  }
 
 }
 
