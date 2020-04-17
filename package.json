@@ -1,22 +1,44 @@
 {
-  "name": "localmedia",
+  "name": "@rifflearning/localmedia",
   "version": "5.2.0",
-  "license": "ISC",
-  "homepage": "https://github.com/otalk/localmedia#readme",
-  "bugs": {
-    "url": "https://github.com/otalk/localmedia/issues"
-  },
+  "description": "WebRTC abstraction for managing local media streams.",
   "keywords": [
     "webrtc",
     "browser",
     "getUserMedia"
   ],
+  "license": "ISC",
+  "author": "Philipp Hancke <fippo@appear.in>",
+  "contributors": [
+    "Lance Stout <lancestout@gmail.com>",
+    "Xander Dumaine <xander.dumaine@gmail.com>",
+    "Jordan Reedie <jordan@riffanalytics.ai>"
+  ],
+  "homepage": "https://github.com/rifflearning/localmedia#readme",
   "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rifflearning/localmedia.git"
+  },
+  "upstream": {
     "type": "git",
     "url": "git+ssh://git@github.com/otalk/localmedia.git"
   },
+  "bugs": {
+    "url": "https://github.com/rifflearning/localmedia/issues"
+  },
   "main": "localmedia.js",
-  "description": "WebRTC abstraction for managing local media streams.",
+  "files": [
+    "localmedia.js"
+  ],
+  "scripts": {
+    "lint": "jshint .",
+    "validate": "npm ls"
+  },
+  "pre-commit": [
+    "lint",
+    "validate",
+    "test"
+  ],
   "dependencies": {
     "hark": "^1.0.0",
     "mockconsole": "0.0.x",
@@ -34,14 +56,5 @@
   },
   "testling": {
     "files": "test/*.js"
-  },
-  "scripts": {
-    "lint": "jshint .",
-    "validate": "npm ls"
-  },
-  "pre-commit": [
-    "lint",
-    "validate",
-    "test"
-  ]
+  }
 }
