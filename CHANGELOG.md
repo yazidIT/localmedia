@@ -1,6 +1,9 @@
 LocalMedia
 ==========
 
+- 6.0.0
+    - replaced getScreenMedia with built in getDisplayMedia
+
 - 3.0.0
     - [BREAKING] removed screenSharingSupport flag
     - [BREAKING] removed deprecated functions: `startLocalMedia` and `stopLocalMedia` use `start` and `stop` instead
