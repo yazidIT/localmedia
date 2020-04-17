@@ -15,5 +15,7 @@
   "newcap": true,
   "immed": true,
   "freeze": true,
-  "eqeqeq": true
+  "eqeqeq": true,
+  "esversion": 6,
+  "predef": ["MediaStream"]
 }

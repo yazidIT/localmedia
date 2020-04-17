@@ -1,6 +1,5 @@
 var util = require('util');
 var hark = require('hark');
-var getScreenMedia = require('getscreenmedia');
 var WildEmitter = require('wildemitter');
 var mockconsole = require('mockconsole');
 
@@ -10,6 +9,16 @@ function isAllTracksEnded(stream) {
         isAllTracksEnded = t.readyState === 'ended' && isAllTracksEnded;
     });
     return isAllTracksEnded;
+}
+
+function isScreenShareSourceAvailable() {
+    // currently we only support chrome v70+ (w/ experimental features in versions <72)
+    // and firefox
+  return (
+    navigator.getDisplayMedia ||
+    navigator.mediaDevices.getDisplayMedia ||
+    Boolean(navigator.mediaDevices.getSupportedConstraints().mediaSource)
+  );
 }
 
 function LocalMedia(opts) {
@@ -115,41 +124,95 @@ LocalMedia.prototype.stopStream = function (stream) {
     }
 };
 
+
+function getDisplayMedia(constraints) {
+    let attachAudio = function(screenStream) {
+        return navigator.mediaDevices.getUserMedia({ video: false, audio: true }).then(function(audioStream) {
+            return new Promise(function(resolve, reject) {
+                try {
+                    var screenWithAudio = new MediaStream();
+                    screenWithAudio.addTrack(screenStream.getVideoTracks()[0]);
+                    screenWithAudio.addTrack(audioStream.getAudioTracks()[0]);
+                    resolve(screenWithAudio);
+                } catch (err) {
+                    reject(err);
+                }
+            });
+        });
+    };
+
+    let displayMedia;
+    let needAttach = false;
+
+    // this is a little gross because chrome doesn't support requesting audio but firefox does
+    if (navigator.mediaDevices.getDisplayMedia) {
+        // chrome 72+
+        displayMedia = navigator.mediaDevices.getDisplayMedia({ video: true });
+        needAttach = true;
+    } else if (navigator.getDisplayMedia) {
+        // chrome 70 & 71 (exp. features enabled)
+        displayMedia = navigator.getDisplayMedia({ video: true }).then();
+        needAttach = true;
+    } else {
+        // firefox ? <= x <= 64
+        displayMedia = navigator.mediaDevices.getUserMedia({
+          audio: constraints && constraints.audio,
+          video: { mediaSource: 'screen' }
+        });
+    }
+
+  if (constraints && constraints.audio && needAttach) {
+      return displayMedia.then(attachAudio);
+  } else {
+      return displayMedia;
+  }
+
+}
+
 LocalMedia.prototype.startScreenShare = function (constraints, cb) {
     var self = this;
 
     this.emit('localScreenRequested');
 
+    if (!isScreenShareSourceAvailable()) {
+        self.emit('localScreenRequestFailed');
+        return;
+    }
+
+
+    // in the case that no constraints are passed,
+    // but a callback is, swap
     if (typeof constraints === 'function' && !cb) {
         cb = constraints;
         constraints = null;
     }
 
-    getScreenMedia(constraints, function (err, stream) {
-        if (!err) {
-            self.localScreens.push(stream);
+    constraints = constraints || { video: true, audio: true};
 
-            stream.getTracks().forEach(function (track) {
-                track.addEventListener('ended', function () {
-                    var isAllTracksEnded = true;
-                    stream.getTracks().forEach(function (t) {
-                        isAllTracksEnded = t.readyState === 'ended' && isAllTracksEnded;
-                    });
+    getDisplayMedia(constraints).then(function (stream) {
+        self.localScreens.push(stream);
 
-                    if (isAllTracksEnded) {
-                        self._removeStream(stream);
-                    }
-                });
-            });
-
-            self.emit('localScreen', stream);
-        } else {
-            self.emit('localScreenRequestFailed');
+        // if the user was muted before sharing,
+        // they should not be unmuted when sharing
+        if (!self.isAudioEnabled()) {
+          self.mute();
         }
 
-        // enable the callback
+        // we only care about video track ending for screen sharing
+        stream.getVideoTracks().forEach(function (track) {
+            track.addEventListener('ended', function () {
+                self._removeStream(stream);
+            });
+        });
+
+        self.emit('localScreen', stream);
         if (cb) {
-            return cb(err, stream);
+            cb(null, stream);
+        }
+    }).catch(function (err) {
+        self.emit('localScreenRequestFailed');
+        if (cb) {
+            cb(err);
         }
     });
 };
@@ -209,6 +272,11 @@ LocalMedia.prototype._audioEnabled = function (bool) {
             track.enabled = !!bool;
         });
     });
+    this.localScreens.forEach(function (stream) {
+        stream.getAudioTracks().forEach(function (track) {
+            track.enabled = !!bool;
+        });
+    });
 };
 LocalMedia.prototype._videoEnabled = function (bool) {
     this.localStreams.forEach(function (stream) {
@@ -222,6 +290,11 @@ LocalMedia.prototype._videoEnabled = function (bool) {
 LocalMedia.prototype.isAudioEnabled = function () {
     var enabled = true;
     this.localStreams.forEach(function (stream) {
+        stream.getAudioTracks().forEach(function (track) {
+            enabled = enabled && track.enabled;
+        });
+    });
+    this.localScreens.forEach(function (stream) {
         stream.getAudioTracks().forEach(function (track) {
             enabled = enabled && track.enabled;
         });
