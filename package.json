@@ -40,19 +40,19 @@
     "test"
   ],
   "dependencies": {
-    "hark": "^1.0.0",
+    "hark": "^1.2.3",
     "mockconsole": "0.0.x",
-    "wildemitter": "^1.0.0"
+    "wildemitter": "^1.2.1"
   },
   "devDependencies": {
     "browserify": "^16.5.1",
     "jshint": "^2.9.5",
     "precommit-hook": "^3.0.0",
     "tape": "^4.6.0",
-    "webrtc-adapter": "^6.4.8"
+    "webrtc-adapter": "^8.1.1"
   },
   "peerDependencies": {
-    "webrtc-adapter": "^6.4.8"
+    "webrtc-adapter": "^8.1.1"
   },
   "testling": {
     "files": "test/*.js"
