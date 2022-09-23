@@ -1,5 +1,5 @@
 {
-  "name": "@rifflearning/localmedia",
+  "name": "localmedia",
   "version": "6.0.0",
   "description": "WebRTC abstraction for managing local media streams.",
   "keywords": [
