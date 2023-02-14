@@ -32,7 +32,8 @@
   ],
   "scripts": {
     "lint": "jshint .",
-    "validate": "npm ls"
+    "validate": "npm ls",
+    "build-test": "browserify test/audiomonitor.js > test_audio_bundle.js; browserify test/basic.js > test_basic_bundle.js; browserify test/sample.js > test_sample_bundle.js;"
   },
   "pre-commit": [
     "lint",
