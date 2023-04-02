@@ -27,13 +27,14 @@
     "url": "https://github.com/rifflearning/localmedia/issues"
   },
   "main": "localmedia.js",
+  "type": "module",
   "files": [
     "localmedia.js"
   ],
   "scripts": {
     "lint": "jshint .",
     "validate": "npm ls",
-    "build-test": "browserify test/audiomonitor.js > test_audio_bundle.js; browserify test/basic.js > test_basic_bundle.js; browserify test/sample.js > test_sample_bundle.js;"
+    "build-test": "browserify test/audiomonitor.js -p esmify > test_audio_bundle.js; browserify test/basic.js -p esmify > test_basic_bundle.js; browserify test/sample.js -p esmify > test_sample_bundle.js;"
   },
   "pre-commit": [
     "lint",
@@ -42,11 +43,13 @@
   ],
   "dependencies": {
     "hark": "^1.2.3",
+    "lodash": "^4.17.21",
     "mockconsole": "0.0.x",
     "wildemitter": "^1.2.1"
   },
   "devDependencies": {
     "browserify": "^16.5.1",
+    "esmify": "^2.1.1",
     "jshint": "^2.9.5",
     "precommit-hook": "^3.0.0",
     "tape": "^4.6.0",

@@ -1,5 +1,5 @@
-var test = require('tape');
-var LocalMedia = require('../localmedia');
+import test from 'tape';
+import LocalMedia from '../localmedia.js';
 
 test('test one audiomonitor', function (t) {
     var media = new LocalMedia({media: {audio: true}, detectSpeakingEvents: true});
@@ -17,8 +17,14 @@ test('test one audiomonitor', function (t) {
             return;
         }
 
-        stream.getTracks().forEach(function (track) { track.stop(); });
+        stream.getTracks().forEach((track) => { 
+            console.log(track);
+            track.stop(); 
+        });
+
+        media.stop(stream);
     });
+
 });
 
 test('test multiple audiomonitors', function (t) {
@@ -44,16 +50,20 @@ test('test multiple audiomonitors', function (t) {
         media.start(null, function (e2, s2) {
             if (e2) {
                 t.fail('startLocalMedia2 failed', e2);
+                media.stop(s1);
                 return;
             }
 
             media.on('localStreamStopped', function(s) {
                 if (s === s2) {
-                    s1.getTracks().forEach(function (track) { track.stop(); });
+                    s1.getTracks().forEach((track) => { track.stop(); });
                 }
             });
 
-            s2.getTracks().forEach(function (track) { track.stop(); });
+            s2.getTracks().forEach((track) => { track.stop(); });
+
+            media.stop(s2);
+            media.stop(s1);
         });
     });
 });

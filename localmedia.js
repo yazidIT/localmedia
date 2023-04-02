@@ -1,7 +1,7 @@
-var util = require('util');
-var hark = require('hark');
-var WildEmitter = require('wildemitter');
-var mockconsole = require('mockconsole');
+import _ from 'lodash';
+import hark from 'hark';
+import WildEmitter from 'wildemitter';
+import mockconsole from 'mockconsole';
 
 function isAllTracksEnded(stream) {
     var isAllTracksEnded = true;
@@ -21,7 +21,8 @@ function isScreenShareSourceAvailable() {
   );
 }
 
-function LocalMedia(opts) {
+var LocalMedia = function(opts){
+
     WildEmitter.call(this);
 
     var config = this.config = {
@@ -56,18 +57,19 @@ function LocalMedia(opts) {
     this._audioMonitors = [];
     this.on('localStreamStopped', this._stopAudioMonitor.bind(this));
     this.on('localScreenStopped', this._stopAudioMonitor.bind(this));
-}
 
-util.inherits(LocalMedia, WildEmitter);
+};
 
+_.extend(LocalMedia.prototype, WildEmitter.prototype);
 
 LocalMedia.prototype.start = function (mediaConstraints, cb) {
     var self = this;
+
     var constraints = mediaConstraints || this.config.media;
 
     this.emit('localStreamRequested', constraints);
 
-    navigator.mediaDevices.getUserMedia(constraints).then(function (stream) {
+    navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
         if (constraints.audio && self.config.detectSpeakingEvents) {
             self._setupAudioMonitor(stream, self.config.harkOptions);
         }
@@ -84,20 +86,21 @@ LocalMedia.prototype.start = function (mediaConstraints, cb) {
         self.emit('localStream', stream);
 
         if (cb) {
-            return cb(null, stream);
+            cb(null, stream);
         }
-    }).catch(function (err) {
-            // Fallback for users without a camera
-            if (self.config.audioFallback && err.name === 'NotFoundError' && constraints.video !== false) {
-                constraints.video = false;
-                self.start(constraints, cb);
-                return;
-            }
+    }).catch((err) => {
+
+        // Fallback for users without a camera
+        if (self.config.audioFallback && err.name === 'NotFoundError' && constraints.video !== false) {
+            constraints.video = false;
+            self.start(constraints, cb);
+            return;
+        }
 
         self.emit('localStreamRequestFailed', constraints);
 
         if (cb) {
-            return cb(err, null);
+            cb(err, null);
         }
     });
 };
@@ -125,21 +128,7 @@ LocalMedia.prototype.stopStream = function (stream) {
 };
 
 
-function getDisplayMedia(constraints) {
-    let attachAudio = function(screenStream) {
-        return navigator.mediaDevices.getUserMedia({ video: false, audio: true }).then(function(audioStream) {
-            return new Promise(function(resolve, reject) {
-                try {
-                    var screenWithAudio = new MediaStream();
-                    screenWithAudio.addTrack(screenStream.getVideoTracks()[0]);
-                    screenWithAudio.addTrack(audioStream.getAudioTracks()[0]);
-                    resolve(screenWithAudio);
-                } catch (err) {
-                    reject(err);
-                }
-            });
-        });
-    };
+async function getDisplayMedia(constraints) {
 
     let displayMedia;
     let needAttach = false;
@@ -147,25 +136,27 @@ function getDisplayMedia(constraints) {
     // this is a little gross because chrome doesn't support requesting audio but firefox does
     if (navigator.mediaDevices.getDisplayMedia) {
         // chrome 72+
-        displayMedia = navigator.mediaDevices.getDisplayMedia({ video: true });
-        needAttach = true;
-    } else if (navigator.getDisplayMedia) {
-        // chrome 70 & 71 (exp. features enabled)
-        displayMedia = navigator.getDisplayMedia({ video: true }).then();
+        displayMedia = await navigator.mediaDevices.getDisplayMedia({ video: true });
         needAttach = true;
     } else {
         // firefox ? <= x <= 64
-        displayMedia = navigator.mediaDevices.getUserMedia({
+        displayMedia = await navigator.mediaDevices.getUserMedia({
           audio: constraints && constraints.audio,
           video: { mediaSource: 'screen' }
         });
     }
 
-  if (constraints && constraints.audio && needAttach) {
-      return displayMedia.then(attachAudio);
-  } else {
-      return displayMedia;
-  }
+    if (constraints && constraints.audio && needAttach) {
+
+        let audioStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+        var screenWithAudio = new MediaStream();
+        screenWithAudio.addTrack(screenStream.getVideoTracks()[0]);
+        screenWithAudio.addTrack(audioStream.getAudioTracks()[0]);
+        return screenWithAudio;
+
+    } else {
+        return displayMedia;
+    }
 
 }
 
@@ -219,7 +210,8 @@ LocalMedia.prototype.startScreenShare = function (constraints, cb) {
 
 LocalMedia.prototype.stopScreenShare = function (stream) {
     var self = this;
-
+    console.log("screenShare stopped");
+    
     if (stream) {
         var idx = this.localScreens.indexOf(stream);
         if (idx > -1) {
@@ -367,4 +359,4 @@ LocalMedia.prototype._stopAudioMonitor = function (stream) {
     }
 };
 
-module.exports = LocalMedia;
+export default LocalMedia;

@@ -1,5 +1,5 @@
-var test = require('tape');
-var LocalMedia = require('../localmedia');
+import test from 'tape';
+import LocalMedia from '../localmedia.js';
 
 /* tests are BROKEN in Firefox
  * since the tests rely on .onended
@@ -24,7 +24,8 @@ test('test localStream and localStreamStopped event', function (t) {
             return;
         }
 
-        stream.getTracks().forEach(function (track) { track.stop(); });
+        stream.getTracks().forEach((track) => { track.stop(); });
+        media.stop(stream);
     });
 });
 
@@ -55,9 +56,11 @@ test('test audio-only stream', function (t) {
             return;
         }
 
-        stream.getTracks().forEach(function (track) { track.stop(); });
+        stream.getTracks().forEach((track) => { track.stop(); });
+        media.stop(stream);
     });
 });
+
 test('test video-only stream', function (t) {
     var media = new LocalMedia();
     media.on('localStream', function (stream) {
@@ -84,7 +87,8 @@ test('test video-only stream', function (t) {
             return;
         }
 
-        stream.getTracks().forEach(function (track) { track.stop(); });
+        stream.getTracks().forEach((track) => { track.stop(); });
+        media.stop(stream);
     });
 });
 
