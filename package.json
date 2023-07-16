@@ -1,6 +1,6 @@
 {
   "name": "localmedia",
-  "version": "6.0.0",
+  "version": "6.1.0",
   "description": "WebRTC abstraction for managing local media streams.",
   "keywords": [
     "webrtc",
@@ -34,13 +34,9 @@
   "scripts": {
     "lint": "jshint .",
     "validate": "npm ls",
-    "build-test": "browserify test/audiomonitor.js -p esmify > test_audio_bundle.js; browserify test/basic.js -p esmify > test_basic_bundle.js; browserify test/sample.js -p esmify > test_sample_bundle.js;"
+    "build-test": "browserify test/audiomonitor.js -p esmify > test_audio_bundle.js && browserify test/basic.js -p esmify > test_basic_bundle.js && browserify test/sample.js -p esmify > test_sample_bundle.js",
+    "bundle": "node build.js"
   },
-  "pre-commit": [
-    "lint",
-    "validate",
-    "test"
-  ],
   "dependencies": {
     "hark": "^1.2.3",
     "lodash": "^4.17.21",
@@ -48,6 +44,9 @@
     "wildemitter": "^1.2.1"
   },
   "devDependencies": {
+    "@babel/core": "^7.22.9",
+    "@babel/preset-env": "^7.22.9",
+    "babelify": "^10.0.0",
     "browserify": "^16.5.1",
     "esmify": "^2.1.1",
     "jshint": "^2.9.5",

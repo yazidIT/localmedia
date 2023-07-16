@@ -11,14 +11,14 @@ function isAllTracksEnded(stream) {
     return isAllTracksEnded;
 }
 
-function isScreenShareSourceAvailable() {
+async function isScreenShareSourceAvailable() {
     // currently we only support chrome v70+ (w/ experimental features in versions <72)
     // and firefox
-  return (
-    navigator.getDisplayMedia ||
-    navigator.mediaDevices.getDisplayMedia ||
-    Boolean(navigator.mediaDevices.getSupportedConstraints().mediaSource)
-  );
+    return (
+        navigator.getDisplayMedia ||
+        (await navigator.mediaDevices.getDisplayMedia()) ||
+        Boolean(navigator.mediaDevices.getSupportedConstraints().mediaSource)
+    );
 }
 
 var LocalMedia = function(opts){
@@ -50,8 +50,9 @@ var LocalMedia = function(opts){
     this.localStreams = [];
     this.localScreens = [];
 
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        this._logerror('Your browser does not support local media capture.');
+    if(!navigator.mediaDevices) {
+        navigator.mediaDevices.getUserMedia()
+            .then(() => { this._logerror('Your browser does not support local media capture.') })
     }
 
     this._audioMonitors = [];
@@ -134,7 +135,7 @@ async function getDisplayMedia(constraints) {
     let needAttach = false;
 
     // this is a little gross because chrome doesn't support requesting audio but firefox does
-    if (navigator.mediaDevices.getDisplayMedia) {
+    if (await navigator.mediaDevices.getDisplayMedia()) {
         // chrome 72+
         displayMedia = await navigator.mediaDevices.getDisplayMedia({ video: true });
         needAttach = true;
@@ -160,16 +161,15 @@ async function getDisplayMedia(constraints) {
 
 }
 
-LocalMedia.prototype.startScreenShare = function (constraints, cb) {
+LocalMedia.prototype.startScreenShare = async function (constraints, cb) {
     var self = this;
 
     this.emit('localScreenRequested');
 
-    if (!isScreenShareSourceAvailable()) {
+    if (!(await isScreenShareSourceAvailable())) {
         self.emit('localScreenRequestFailed');
         return;
     }
-
 
     // in the case that no constraints are passed,
     // but a callback is, swap
@@ -180,18 +180,19 @@ LocalMedia.prototype.startScreenShare = function (constraints, cb) {
 
     constraints = constraints || { video: true, audio: true};
 
-    getDisplayMedia(constraints).then(function (stream) {
+    try {
+        let stream = await getDisplayMedia(constraints);
         self.localScreens.push(stream);
 
         // if the user was muted before sharing,
         // they should not be unmuted when sharing
         if (!self.isAudioEnabled()) {
-          self.mute();
+            self.mute();
         }
-
+  
         // we only care about video track ending for screen sharing
-        stream.getVideoTracks().forEach(function (track) {
-            track.addEventListener('ended', function () {
+        stream.getVideoTracks().forEach( track => {
+            track.addEventListener('ended', () => {
                 self._removeStream(stream);
             });
         });
@@ -200,12 +201,13 @@ LocalMedia.prototype.startScreenShare = function (constraints, cb) {
         if (cb) {
             cb(null, stream);
         }
-    }).catch(function (err) {
+
+    } catch (err) {
         self.emit('localScreenRequestFailed');
         if (cb) {
             cb(err);
         }
-    });
+    }
 };
 
 LocalMedia.prototype.stopScreenShare = function (stream) {
