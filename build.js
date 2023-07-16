@@ -1,9 +1,12 @@
 import Browserify from 'browserify';
-import babelify from 'babelify';
 import fs from 'fs';
+import babelify from 'babelify';
 
-let bundler = Browserify({ standalone: 'LocalMedia' })
-bundler.add('./localmedia.js');
+let bundler = Browserify({ 
+    standalone: 'LocalMedia',
+    entries: './localmedia.js'
+})
+
 bundler
     .transform(babelify.configure({
         presets : ["@babel/preset-env"]
