@@ -34,7 +34,7 @@
   "scripts": {
     "lint": "jshint .",
     "validate": "npm ls",
-    "build-test": "browserify test/audiomonitor.js -p esmify > test_audio_bundle.js && browserify test/basic.js -p esmify > test_basic_bundle.js && browserify test/sample.js -p esmify > test_sample_bundle.js",
+    "build-test": "browserify -t [ babelify ] -p esmify test/audiomonitor.js -o test_audio_bundle.js && browserify -t [ babelify ] -p esmify test/basic.js -o test_basic_bundle.js && browserify -t [ babelify ] -p esmify test/sample.js -o test_sample_bundle.js",
     "bundle": "node build.js"
   },
   "dependencies": {
@@ -48,6 +48,7 @@
     "@babel/preset-env": "^7.22.9",
     "babelify": "^10.0.0",
     "browserify": "^16.5.1",
+    "esmify": "^2.1.1",
     "jshint": "^2.9.5",
     "precommit-hook": "^3.0.0",
     "tape": "^4.6.0",
